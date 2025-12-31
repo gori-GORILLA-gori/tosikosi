@@ -167,18 +167,29 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int) {
 
     // --- 年越し待機ロジックの改善 ---
     auto get_target_time = []() {
-        std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
+        auto now = std::chrono::system_clock::now();
         std::time_t t_now = std::chrono::system_clock::to_time_t(now);
-        std::tm t_struct;
-        localtime_s(&t_struct, &t_now);
 
-        // テスト用：現在の10秒後に設定する場合などはここを調整
-        t_struct.tm_hour = 23;
-        t_struct.tm_min = 59;
-        t_struct.tm_sec = 54;
+        std::tm t{};
+        localtime_s(&t, &t_now);
 
-        return std::chrono::system_clock::from_time_t(std::mktime(&t_struct));
+        t.tm_mon = 11;   // 12月 (0始まり)
+        t.tm_mday = 31;   // 31日
+        t.tm_hour = 23;
+        t.tm_min = 59;
+        t.tm_sec = 54;
+
+        auto target = std::chrono::system_clock::from_time_t(std::mktime(&t));
+
+        // すでに過ぎてたら来年の12/31へ
+        if (target <= now) {
+            t.tm_year += 1;
+            target = std::chrono::system_clock::from_time_t(std::mktime(&t));
+        }
+
+        return target;
         };
+
 
     auto target_time = get_target_time();
     MSG msg = { 0 };
